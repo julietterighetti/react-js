@@ -4,11 +4,7 @@ import React, { Component } from 'react'
 import logo from './logo.svg'
 import './App.css'
 
-import defaultPicture from './components/img/default.jpg'
-
-const Materialize = window.Materialize
-
-const APP_TITLE = 'Awesome App'
+const APP_TITLE = 'Recipe & Ingredients App'
 //update document title (displayed in the opened browser tab)
 document.title = APP_TITLE
 
@@ -17,6 +13,7 @@ import { get, ENDPOINTS } from './utils/api'
 
 //components
 import WeatherCard from './components/WeatherCard'
+import RecipeCard from './components/RecipeCard'
 
 class App extends Component {
 
@@ -26,10 +23,12 @@ class App extends Component {
         super( props )
         this.state = {
             weather: undefined,
-            city: ''
+            recipe: undefined,
+            city: '',
+            page_data: '',
+            sort_data: ''
         }
     }
-
 
     render() {
         return (
@@ -40,179 +39,171 @@ class App extends Component {
                 </div>
 
                 <div className="App-content">
-                    <div className="center-align">
 
-                        <form onSubmit={ this.fetchWeather }>
+                    {/* Bandeau selection des données pour la recherche */ }
+                    <div className="row brown lighten-4">
 
-                            <div className="row" style={ { marginBottom: 0 } }>
-                                <div className="input-field col s6 offset-s3">
-                                    <input id="cityInput" type="text" value={ this.state.city } onChange={ this.handleChange } />
-                                    <label htmlFor="cityInput">City</label>
+                        <div className="col s3">
+                            <div className="center inline" style={ { paddingTop: 46 } }>
+                                <div className="input-field inline valign-wrapper">
+                                    {/* input onChange event calls recipes with ingredient choose by the user */ }
+                                    <input className="waves-effect waves-light btn white deep-orange-text" type="text" placeholder="Search By Ingredients" value={ this.state.city } onChange={ this.handleChange } />
                                 </div>
                             </div>
+                        </div>
 
-                            <button type="submit" className="waves-effect waves-light btn">
-                                Weather?
-                            </button>
+                        <div className="col s3">
+                            <div className="collection deep-orange lighten-2">
+                                {/* Links to select the way to sort 6 */ }
+                                <li className="collection-header white-text" style={ { paddingLeft: 15 } }><h5>Sort By</h5></li>
+                                <a className="collection-item deep-orange-text" value='r' onChange={ this.handleChange_sort }>
+                                    Top Rating
+                                </a>
+                                <a className ="collection-item deep-orange-text" value='t' onChange={ this.handleChange_sort }>
+                                    Trending
+                                </a>
+                            </div>
+                        </div>
 
-                        </form>
+                        <div className="col s3">
+                            <div className="center-align" style={ { paddingTop: 60 } }>
+                                {/*-- Dropdown Trigger -- */ }
+                                <a className='dropdown-button btn deep-orange lighten-2' data-activates='dropdown1'>Number of pages ?</a>
 
-                    </div>
+                                {/*-- Dropdown Structure -- */ }
+                                <ul id='dropdown1' className='dropdown-content'>
+                                    <li><a className="deep-orange-text" value='1' onChange={ this.handleChange_page }>
+                                        1
+                                    </a></li>
+                                    <li><a className="deep-orange-text" value='2' onChange={ this.handleChange_page }>
+                                        2
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
 
-                    <div className="row" style={ { marginTop: 20 } } >
-                        <div className="col s12 m6 offset-m3">
-                            { this.displayWeatherInfo() }
+                        <div className="col s3">
+                            <div className="center-align" style={ { paddingTop: 60 } }>
+                                {/* button onClick event calls the fetchWeather method */ }
+                                <button className="waves-effect waves-light btn deep-orange lighten-2" onClick={ this.fetchWeather } >
+                                    Recipe ?
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
 
-            </div>
+                    {/* Bandeau Affichage des ingrédients */ }
+                    <div className="row brown lighten-5" style={ { marginTop: 20 } } >
+                        { this.displayRecipeInfo() }
+                    </div>
+
+                    {/* Affichage des recettes */ }
+                    <div className="row" style={ { marginTop: 20 } } >
+                        { this.displayWeatherInfo() }
+                    </div>
+
+                </div>
+            </div >
         )
     }
-
-
 
     handleChange = ( event ) => {
         this.setState( {
             city: event.target.value
-        } )
+        } );
     }
 
+    handleChange_page = ( event ) => {
+        this.setState( {
+            page_data: event.target.value
+        } );
+    }
 
-    //method triggered by onSubmit event of the form or by onClick event of the "Weather?" button
+    handleChange_page = ( event ) => {
+        this.setState( {
+            sort_data: event.target.value
+        } );
+    }
+
+    //method triggered by onClick event of the "Weather?" button
     /* Arrow function syntax used for Autobinding, see details here : https://facebook.github.io/react/docs/react-without-es6.html#autobinding */
-    fetchWeather = async ( event ) => {
-
-        event.preventDefault()
+    fetchWeather = async () => {
 
         /* ASYNC - AWAIT DOCUMENTATION : https://developer.mozilla.org/fr/docs/Web/JavaScript/Reference/Op%C3%A9rateurs/await */
 
         try {
-            let weather = await get( ENDPOINTS.WEATHER_API_URL, {
-                //YOU NEED TO PROVIDE YOUR "APIXU" API KEY HERE, see /utils/api.js file to grab the DOCUMENTATION file
-                key: '07fb607594c34e5b9ca213416172302',
-                q: this.state.city
+            const weather = await get( ENDPOINTS.SEARCH_API_URL, {
+                //YOU NEED TO PROVIDE YOUR API KEY HERE
+                key: '596b09d3a23693bbfff183ac4204caab',
+                q: this.state.city,
+                page: this.state.page_data,
+                sort: this.state.sort_data
             } )
 
-            //checking that we received a well-formated weather object
-            if ( weather.current ) {
-                //weather data is now received from the server thanks to async-await
-                let updatedWeatherWithImage = await this.fetchPicture( weather )
+            console.log( weather )
 
-                /* React state DOCUMENTATION : https://facebook.github.io/react/docs/lifting-state-up.html */
-                this.setState( {
-                    weather: updatedWeatherWithImage
-                } )
-            }
-            //handling error
-            else {
-                console.log( weather )
-                //weather will contain an error object (see APIXU DOCUMENTATION)
-                Materialize.toast( weather.error.message, 8000, 'error-toast' )
-                //Using Materialize toast component to display error messages - see http://materializecss.com/dialogs.html
-            }
+            /* React state DOCUMENTATION : https://facebook.github.io/react/docs/lifting-state-up.html */
 
-
+            this.setState( {
+                weather: weather
+            } )
         }
         catch ( error ) {
-            Materialize.toast( error, 8000, 'error-toast' )
             console.log( 'Failed fetching data: ', error )
         }
-
     }
-
-    //will fetch a picture with the name of the city fetched by the weather API
-    //will return an updated weather object (same object + one image)
-    fetchPicture = async ( weather ) => {
-        try {
-
-            const pictures = await get( ENDPOINTS.PIXABAY_API_URL, {
-                //YOU NEED TO PROVIDE YOUR "PIXABAY" API KEY HERE (see /utils/api.js file to grab the DOCUMENTATION link)
-                key: '3658891-beeef4fdb6b8a762ab78e1cf9',
-                q: weather.location.name + '+city',
-                image_type: 'all',
-                safesearch: true
-            } )
-
-            //if we have results
-            if ( pictures.hits.length ) {
-                //saving the first picture of the results in our weather object
-                weather.pixabayPicture = pictures.hits[ 0 ].webformatURL
-            }
-            //else we save a defalut picture in our weather object
-            else {
-                weather.pixabayPicture = defaultPicture
-            }
-
-        }
-        //same default picture is saved if the image request fails
-        catch ( error ) {
-
-            weather.pixabayPicture = defaultPicture
-
-            Materialize.toast( error, 8000, 'error-toast' )
-            console.log( 'Failed fetching picture: ', error )
-        }
-
-        return weather
-    }
-
 
     //handle display of the received weather object
     displayWeatherInfo = () => {
         const weather = this.state.weather
 
-        /*
-            DATA FORMAT SENT BY THE API LOKKS LIKE THIS :
-    
-            {
-                "pixabayPicture": string, //CUSTOM ADD VIA PIXABAY API CALL
-                "location": {
-                    "name": string,
-                    "region": string,
-                    "country": string,
-                    "lat": number,
-                    "lon": number,
-                    "tz_id": string,
-                    "localtime_epoch": number,
-                    "localtime": string
-                },
-                "current": {
-                    "temp_c": number,
-                    "is_day": boolean,
-                    "condition": {
-                        "text": string,
-                        "icon": string
-                    },
-                    "wind_kph": number
-                }
-            }
-    
-        */
-
         if ( weather ) {
+            return weather.recipes.map( recipe => {
+                return (
+                    <WeatherCard title={ recipe.title } image_url={ recipe.image_url }
+                        publisher={ recipe.publisher } social_rank={ recipe.social_rank }
+                        fetchRecipe={ this.fetchRecipe } recipe_id={ recipe.recipe_id } />
+                )
+            } )
 
-            const locationName = weather.location.name
-            const temperature = weather.current.temp_c
-            const weatherConditionText = weather.current.condition.text
-            const weatherConditionIcon = weather.current.condition.icon
-            const windSpeed = weather.current.wind_kph
-            const picture = weather.pixabayPicture
+        }
+        return null
+    }
 
+
+    //method triggered by onClick event of the "Obtenir la recette" button
+
+    fetchRecipe = async ( rId ) => {
+
+        try {
+            const recipe = await get( ENDPOINTS.GET_API_URL, {
+                key: '596b09d3a23693bbfff183ac4204caab',
+                rId: rId
+            } )
+
+            console.log( recipe.recipe )
+
+            this.setState( {
+                recipe: recipe.recipe
+            } )
+        }
+        catch ( error ) {
+            console.log( 'Failed fetching data: ', error )
+        }
+    }
+
+    //handle display of the received weather object
+    displayRecipeInfo = () => {
+        const recipe = this.state.recipe
+
+        if ( recipe ) {
             return (
-                <WeatherCard
-                    locationName={ locationName }
-                    temperature={ temperature }
-                    weatherConditionText={ weatherConditionText }
-                    weatherConditionIcon={ weatherConditionIcon }
-                    windSpeed={ windSpeed }
-                    picture={ picture } />
+                <RecipeCard title={ recipe.title } image_url={ recipe.image_url }
+                    ingredients={ recipe.ingredients } />
             )
         }
-
         return null
     }
 
 }
-
 export default App
